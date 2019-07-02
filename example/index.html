@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+    <meta name="description" content="Inbenta InContact adapter demo">
+    <title>Inbenta Incontact Adapter demo</title>
+    <link rel="icon" href="https://www.inbenta.com/favicon.ico" type="image/x-icon">
+    <!-- Import Inbenta Chatbot SDK (works with SDK version 1.26.0, but you can try the last one listed at https://developers.inbenta.io/chatbot/javascript-sdk/sdk-subresource-integrity) -->
+    <script type="text/javascript" src="https://sdk.inbenta.io/chatbot/1.26.0/inbenta-chatbot-sdk.js" integrity="sha384-JNTy/kdUAPwDBdoI7douqLBGBmjY4k7tiTpvtceCBuFDNeh/Wb0hEV4Wfjjbwlfi" crossorigin="anonymous"></script>
+    <!-- Import InContact adapter -->
+    <script type="text/javascript" src="../src/incontact-adapter.js"></script>
+    <!-- Html page styles -->
+    <style>.inb-demo{margin:0}.inb-demo *{box-sizing:border-box}.inb-demo :focus{outline:0 transparent}.inb-demo__ul{list-style:none;margin:0;padding:0}.inb-demo__button,.inb-demo__title{margin:0}.inb-demo__main{padding:16px}.inb-demo__main__content{max-width:1000px;margin:0 auto;font-family:helvetica,sans-serif}.inb-demo__header{font-weight:700;font-size:16px;text-align:right;color:#04221d;background-color:#e6e6e6;border-bottom:1px solid #d8d8d8;padding:17px}.inb-demo__header__title{display:flex;align-items:center;justify-content:space-between;max-width:1000px;margin:0 auto}.inb-demo__header__title a{height:22px}.inb-demo__header__image{width:72px}.inb-demo__title{margin-top:40px;margin-bottom:24px;font-size:24px}.inb-demo__button{display:flex;align-items:center;justify-content:flex-start;min-height:30px;position:relative;padding-left:24px;text-decoration:none;color:#333;margin-bottom:6px;transition:.2s ease-out}.inb-demo__button:hover{color:#f6253a}.inb-demo__button:after,.inb-demo__button:before{position:absolute;left:8px;top:15px;content:"";display:inline-block;background-color:#333;border-radius:4px;width:6px;height:2px;transition:.2s ease-out}.inb-demo__button:before{transform:rotate(45deg);top:11px}.inb-demo__button:after{transform:rotate(-45deg)}.inb-demo__button:hover:after,.inb-demo__button:hover:before{background-color:#f6253a;left:12px}</style>
+  </head>
+  <body class="inb-demo">
+    <header class="inb-demo__header">
+    <div class="inb-demo__header__title">
+      <a href="https://www.inbenta.com" target="_blank"><img class="inb-demo__header__image" src="https://www.inbenta.com/wp-content/themes/inbenta/img/logo-inbenta.svg" alt="Inbenta"></a>
+    </div>
+    </header>
+    <main class="inb-demo__main">
+      <div class="inb-demo__main__content">
+        <h1 class="inb-demo__title">Chatbot Incontact Adapter demo</h1>
+      </div>
+    </main>
+    <!-- INBENTA CHATBOT SDK-->
+    <script type="text/javascript">
+
+    /*** Inbenta chatbot SDK configuration and build ***/
+
+    var inbApp = {
+      // Inbenta chatbot SDK credentials
+    	sdkAuth: {
+        inbentaKey: '<YOUR_API_KEY>',
+        domainKey: '<YOUR_DOMAIN_KEY>'
+    	},
+      // Inbenta chatbot SDK configuration
+    	sdkConfig: {
+      	chatbotId: 'incontact_chatbot',
+      	environment: 'development',
+      	userType: 0,
+      	lang:'en',
+        labels: {
+          en: { 'interface-title': 'InContact Adapter' }
+        },
+      	closeButton: { visible: true },
+        html: { 'custom-window-header': '<div></div>' },
+    		adapters: []
+    	},
+      // Inbenta escalation adapters conf
+      inbAppConfig: {
+        noAgentsAvailable: {
+          action: 'displayChatbotMessage',
+          value: 'no-agents' // If value is 'no-agents' (default), this label will be translated or else, custom text can be set here too
+        },
+        rejectedEscalation: {
+          action: 'displayChatbotMessage',
+          value: 'enter-question' // If value is 'enter-question' (default), this label will be translated or else, custom text can be set here too
+        },
+        maxNotFound: 2,
+        contentForm: 'ChatWithLiveAgentContactForm',
+        questions: [
+          {
+            label: 'FIRST_NAME',
+            text: 'What\'s your first name?',
+            validationErrorMessage: 'Your first name is not correct',
+            validate: function(value) {
+              return value !== '';
+            }
+          }
+        ],
+      },
+      // Incontact Adapter conf
+      incontactConf: {
+        enabled: true, // Enable inContact escalation
+        applicationName: '',
+        vendorName: '',
+        applicationSecret: '',
+        version: 'v12.0',
+        agentWaitTimeout: 20, // seconds
+        getMessageTimeout: 60, // seconds
+        incontactSessionLifetime: 3, // minutes
+        agent: {
+          name: 'InContact Agent', // Agent name
+          avatarImage: '' // Agent avatar image soure (file or base64), if empty inContact image will be used
+        },
+        payload: {
+          pointOfContact: '',
+          fromAddress: '',
+          chatRoomID: '',
+          parameters: []
+        }
+      }
+    }
+
+    // Add adapters
+    window.inbApp.sdkConfig.adapters.push(
+      /*
+       * InContact adapter must be pushed before escalation adapters
+       * Uncomment below the escalation adatper to use
+       */
+      inbentaIncontactAdapter(inbApp.incontactConf),
+
+      /*
+       * Escalate to InContact with natural language form
+       *  More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/nl-escalation-adapter
+       */
+      // window.SDKlaunchNLEsclationForm(inbentaPromiseAgentsAvailableTrue, inbApp.inbAppConfig.contentForm, inbApp.inbAppConfig.rejectedEscalation, inbApp.inbAppConfig.noAgentsAvailable, inbApp.inbAppConfig.maxNotFound),
+
+      /*
+       * Escalate to InContact with html form
+       * More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/html-escalation-adapter
+       */
+      window.SDKcreateHtmlEscalationForm(inbentaPromiseAgentsAvailableTrue, inbApp.inbAppConfig.questions, inbApp.inbAppConfig.rejectedEscalation.value, inbApp.inbAppConfig.noAgentsAvailable.value, true)
+    );
+
+    window.InbentaChatbotSDK.buildWithDomainCredentials(inbApp.sdkAuth, inbApp.sdkConfig);
+
+    </script>
+  </body>
+</html>
