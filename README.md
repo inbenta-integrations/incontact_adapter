@@ -15,8 +15,6 @@ This application has been developed based on these dependencies:
 * Inbenta's Chatbot SDK **v1.26.0**
 * Incontact SDK **v12.0**
 
-It also uses the Facebook's Graph API v4.0. You can find more information in the [official Facebook documentation](https://developers.facebook.com/docs/graph-api/changelog).
-
 ## Installation
 In order to add this adapter to your SDK, you need to import the file `/src/adapters/incontact-adapter.js` into the HTML/JS file where you're building the SDK. Then, append it to the SDK adapters array providing the adapter configuration as shown in the [example](#integration-example) section.
 
