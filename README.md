@@ -2,12 +2,18 @@
 
 ### Table of Contents
 * [Description](#description)
+* [Dependencies](#dependencies)
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Integration example](#integration-example)
 
 ## Description
 This adapter connects [Inbenta's Chatbot](https://www.inbenta.com/en/products/chatbot/) SDK with [InContact](https://www.niceincontact.com/)'s chat solution.
+
+## Dependencies
+This application has been developed based on these dependencies:
+* Inbenta's Chatbot SDK **v1.26.0**
+* Incontact SDK **v12.0**
 
 ## Installation
 In order to add this adapter to your SDK, you need to import the file `/src/adapters/incontact-adapter.js` into the HTML/JS file where you're building the SDK. Then, append it to the SDK adapters array providing the adapter configuration as shown in the [example](#integration-example) section.
