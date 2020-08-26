@@ -1,41 +1,65 @@
-# INCONTACT CONNECTOR CHATBOT ADAPTER
+# INCONTACT ADAPTER
 
 ### Table of Contents
 * [Description](#description)
-* [Dependencies](#dependencies)
+* [Functionalities](#functionalities)
 * [Installation](#installation)
 * [Configuration](#configuration)
+* [Troubleshooting](#troubleshooting)
 * [Integration example](#integration-example)
 
-## Description
-This adapter connects [Inbenta's Chatbot](https://www.inbenta.com/en/products/chatbot/) SDK with [InContact](https://www.niceincontact.com/)'s chat solution.
 
-## Dependencies
-This application has been developed based on these dependencies:
-* Inbenta's Chatbot SDK **v1.26.0**
-* Incontact SDK **v12.0**
+## Description
+
+The purpose of this adapter is to allow Inbenta customers to connect the [Inbenta's Chatbot](https://www.inbenta.com/en/products/chatbot/) to Nice [InContact](https://www.niceincontact.com/) and thus use the Incontact chat platform instead of the default provided by Inbenta (HyperChat solution).
+The adapter is an extension of how the chatbot works, so installation should be easy.
+
+## Functionalities
+
+The adapter creates and establishes a connection between the user and the Incontact platform using the [Patron API] (https://developer.niceincontact.com/API/PatronAPI#/) provided by NICE.
+This API allows to obtain chat updates (messages only) using Long Polling technology, but is limited to the following features:
+
+* Chat creation after bot escalation that passes the following variables to the Patron API within the javascript object called **payload**.
+   * **'fromAddress'**: email provided in the escalation form.
+   * **'parameters'**: all the data from the escalation form introduced by the user in JSON format.
+* **Automatic chat rejection** when the agent does not accept the chat after the time specified in the field '**agentWaitTimeout**'.
+* **Detection of out of business hours** using a string. This simple detection checks the label returned by the API and verifies it against the field called '**outOfTimeDetection**'. It is very important to configure this variable so that the adapter works correctly.
+* The adapter can be enabled or disabled on its own, if the property called '**enabled**' is set to 'false', the escalation process will be disabled.
+* The agent's name and avatar shown in the chatbot can also be configured within the property called '**agent**'. 
+* A verbose log can be activated setting the variable '**debugMode**' to 'true'.
 
 ## Installation
-In order to add this adapter to your SDK, you need to import the file `/src/adapters/incontact-adapter.js` into the HTML/JS file where you're building the SDK. Then, append it to the SDK adapters array providing the adapter configuration as shown in the [example](#integration-example) section.
+In order to add this adapter to your SDK, you need to import the file `/src/incontact-adapter.js` into the HTML/JS file where you're building the SDK. Then, append it to the SDK adapters array providing the adapter configuration as shown in the [example](#integration-example) section.
+Before installing it, consider the following:
 
-## InContact adapter Configuration
+* The adapter works with version **'1.41.0'** of the SDK.
+* The adapter only works with the Patron API version **'v12.0'**
+* The adapter needs **cookies** to maintain the user's session with Incontact.
+* There are variables that must be obtained from the Incontact platform, such as **'applicationName', 'vendorName' or 'applicationSecret'**. All of them can be found in the _Admin -> Account Settings -> API Applications_ section within the Incontact platform.
+* The **timers** defined in the configuration shouldn't be changed.
+
+### Configuration
 This adapter expects a Javascript object with the following configuration:
 
 This would be a valid configuration object:
 ```javascript
 var incontactConf = {
+  debugMode: false, //enable-disable debugmode for logs
   enabled: true, // Enable inContact escalation
   applicationName: '',
   vendorName: '',
   applicationSecret: '',
   version: 'v12.0',
   agentWaitTimeout: 20, // seconds
-  getMessageTimeout: 20,
-  incontactSessionLifetime: 3, // minutes
+  getMessageTimeout: 20, // miliseconds
+  incontactSessionLifetime: 5, // minutes
   agent: {
-    name: 'InContact Agent', // Agent name
+    name: 'Agent', // Agent name
     avatarImage: '' // Agent avatar image soure (file or base64), if empty inContact image will be used
   },
+  defaultUserName: 'User', //name displayed for user in incontact in case there is no form on escalate
+  defaultChatbotName: 'Chatbot', //name displayed for chatbot messages in incontact 
+  defaultSystemName: 'System', //name displayed for chatbot system messages in incontact 
   payload: {
     pointOfContact: '',
     fromAddress: '',
@@ -45,13 +69,19 @@ var incontactConf = {
 }
 ```
 
-InContact configuration properties (applicationName, applicationSecret, vendorName) can be found in the _Admin -> Account Settings -> API Applications_ section.
+The backstage instance need to have the [escalationFormV2] (https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/nl-escalation-adapter-2) available otherwise it will not work. 
+There is one thing to take into account also, for No-Results dialog, the content that must be redirected to in case the No-Results is the content of "EscalationStart" action.
 
-## Integration example
+### Troubleshooting
+
+* **The out of time message is not shown to the user:** Check what is the message returned by the Patron API and verify it matches with the label defined in the configuration field called **'outOfTimeDetection'**.
+* **The agents don't have enough time to accept the chats:** The time elapsed before the automatic closing of the chat is defined in **'agentWaitTimeout'** and can be increased.
+
+### Integration example
 In the following example we're creating a chatbot with the InContact adapter:
-* Import the Inbenta Chatbot SDK (works with SDK version 1.26.0, but you can try the last one listed [here](https://developers.inbenta.io/chatbot/javascript-sdk/sdk-subresource-integrity))
+* Import the Inbenta Chatbot SDK
     ```html
-    <script src="https://sdk.inbenta.io/chatbot/1.26.0/inbenta-chatbot-sdk.js"></script>
+    <script src="https://sdk.inbenta.io/chatbot/1.41.0/inbenta-chatbot-sdk.js"></script>
     ```
 * Import the InContact adapter from `src/incontact-adapter.js`
     ```html
@@ -77,31 +107,9 @@ In the following example we're creating a chatbot with the InContact adapter:
         html: { 'custom-window-header': '<div></div>' },
         adapters: []
       },
-      // Inbenta escalation adapters conf
-      inbAppConfig: {
-        noAgentsAvailable: {
-          action: 'displayChatbotMessage',
-          value: 'no-agents' // If value is 'no-agents' (default), this label will be translated or else, custom text can be set here too
-        },
-        rejectedEscalation: {
-          action: 'displayChatbotMessage',
-          value: 'enter-question' // If value is 'enter-question' (default), this label will be translated or else, custom text can be set here too
-        },
-        maxNotFound: 2,
-        contentForm: 'ChatWithLiveAgentContactForm', // Chatbot instance nl-escalation form content
-        questions: [ // Array of question objects
-          {
-            label: 'FIRST_NAME', // Example question
-            text: 'What\'s your first name?',
-            validationErrorMessage: 'Your first name is not correct',
-            validate: function (value) {
-              return value !== '';
-            }
-          }
-        ]
-      },
       // Incontact Adapter conf
       incontactConf: {
+        debugMode: true, //enable-disable debugmode for logs
         enabled: true, // Enable inContact escalation
         applicationName: '',
         vendorName: '',
@@ -114,6 +122,9 @@ In the following example we're creating a chatbot with the InContact adapter:
           name: 'Incontact Agent', // Agent name
           avatarImage: '' // Agent avatar image soure (file or base64), if empty inContact image will be use
         },
+        defaultUserName: 'User', //name displayed for user in incontact in case there is no form on escalate
+        defaultChatbotName: 'Chatbot', //name displayed for chatbot messages in incontact 
+        defaultSystemName: 'System', //name displayed for chatbot system messages in incontact 
         payload: {
           pointOfContact: '',
           fromAddress: '',
@@ -130,7 +141,7 @@ In the following example we're creating a chatbot with the InContact adapter:
 * Add the adapter escalation adapter to be used (passing the adapter configuration object). This adapter must be pushed after the InContact adapter
     ```javascript
     inbApp.sdkConfig.adapters.push(
-        SDKcreateHtmlEscalationForm(inbentaPromiseAgentsAvailableTrue, inbApp.inbAppConfig.questions, inbApp.inbAppConfig.rejectedEscalation.value, inbApp.inbAppConfig.noAgentsAvailable.value, true)
+        window.SDKNLEscalation2(inbentaPromiseAgentsAvailableTrue)
     );
     ```
 
@@ -146,8 +157,8 @@ Here is the full integration code:
     <title>Inbenta Incontact Adapter demo</title>
     <link rel="icon" href="https://www.inbenta.com/favicon.ico" type="image/x-icon">
 
-    <!-- Import the Inbenta Chatbot SDK (works with SDK version 1.26.0, but you can try the last one listed [here](https://developers.inbenta.io/chatbot/javascript-sdk/sdk-subresource-integrity)) -->
-    <script src="https://sdk.inbenta.io/chatbot/1.26.0/inbenta-chatbot-sdk.js" integrity="sha384-JNTy/kdUAPwDBdoI7douqLBGBmjY4k7tiTpvtceCBuFDNeh/Wb0hEV4Wfjjbwlfi" crossorigin="anonymous"></script>
+    <!-- Import the Inbenta Chatbot SDK (works with SDK version 1.41.0, but you can try the last one listed [here](https://developers.inbenta.io/chatbot/javascript-sdk/sdk-subresource-integrity)) -->
+    <script src="https://sdk.inbenta.io/chatbot/1.41.0/inbenta-chatbot-sdk.js" integrity="sha384-JNTy/kdUAPwDBdoI7douqLBGBmjY4k7tiTpvtceCBuFDNeh/Wb0hEV4Wfjjbwlfi" crossorigin="anonymous"></script>
 
     <!-- Import InContact adapter -->
     <script type="text/javascript" src="../src/incontact-adapter.js"></script>
@@ -178,31 +189,9 @@ Here is the full integration code:
         html: { 'custom-window-header': '<div></div>' },
         adapters: []
       },
-      // Inbenta escalation adapters conf
-      inbAppConfig: {
-        noAgentsAvailable: {
-          action: 'displayChatbotMessage',
-          value: 'no-agents' // If value is 'no-agents' (default), this label will be translated or else, custom text can be set here too
-        },
-        rejectedEscalation: {
-          action: 'displayChatbotMessage',
-          value: 'enter-question' // If value is 'enter-question' (default), this label will be translated or else, custom text can be set here too
-        },
-        maxNotFound: 2,
-        contentForm: 'ChatWithLiveAgentContactForm',
-        questions: [
-          {
-            label: 'FIRST_NAME',
-            text: 'What\'s your first name?',
-            validationErrorMessage: 'Your first name is not correct',
-            validate: function(value) {
-              return value !== '';
-            }
-          }
-        ],
-      },
       // Incontact Adapter conf
       incontactConf: {
+        debugMode: true, //enable-disable debugmode for logs
         enabled: true, // Enable inContact escalation
         applicationName: '',
         vendorName: '',
@@ -215,6 +204,9 @@ Here is the full integration code:
           name: 'Incontact Agent', // Agent name
           avatarImage: '' // Agent avatar image soure (file or base64), if empty inContact image will be use
         },
+        defaultUserName: 'User', //name displayed for user in incontact in case there is no form on escalate
+        defaultChatbotName: 'Chatbot', //name displayed for chatbot messages in incontact 
+        defaultSystemName: 'System', //name displayed for chatbot system messages in incontact 
         payload: {
           pointOfContact: '',
           fromAddress: '',
@@ -234,15 +226,9 @@ Here is the full integration code:
 
       /*
        * Escalate to InContact with natural language form
-       *  More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/nl-escalation-adapter
+       *  More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/nl-escalation-adapter-2
        */
-      // window.SDKlaunchNLEsclationForm(inbentaPromiseAgentsAvailableTrue, inbApp.inbAppConfig.contentForm, inbApp.inbAppConfig.rejectedEscalation, inbApp.inbAppConfig.noAgentsAvailable, inbApp.inbAppConfig.maxNotFound),
-
-      /*
-       * Escalate to InContact with html form
-       * More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/html-escalation-adapter
-       */
-      SDKcreateHtmlEscalationForm(inbentaPromiseAgentsAvailableTrue, inbApp.inbAppConfig.questions, inbApp.inbAppConfig.rejectedEscalation.value, inbApp.inbAppConfig.noAgentsAvailable.value, true)
+      window.SDKNLEscalation2(inbentaPromiseAgentsAvailableTrue)
     );
 
     InbentaChatbotSDK.buildWithDomainCredentials(inbApp.sdkAuth, inbApp.sdkConfig);
