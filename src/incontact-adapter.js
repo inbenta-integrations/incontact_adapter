@@ -8,6 +8,8 @@
 var inbentaIncontactAdapter = function (incontactConf) {
 
   let workingTime = true;
+  let agentActive = false;
+
   if (!incontactConf.enabled) {
     return function () {};
   } else if (!incontactConf.applicationName || !incontactConf.applicationSecret || !incontactConf.vendorName || !incontactConf.payload.pointOfContact) {
@@ -243,14 +245,26 @@ var inbentaIncontactAdapter = function (incontactConf) {
             switch (message.PartyTypeValue) {
               case '1':
               case 'Agent':
+                chatbot.actions.hideChatbotActivity();
                 chatbot.actions.displayChatbotMessage({ type: 'answer', message: message.Text });
                 break;
               case 'System':
                 if (message.Type === 'Ask') {
-                  auth.firstQuestion = message.Text;
+                    if (message.Text !== 'Hello, what is your name?') {
+                        auth.firstQuestion = message.Text;
+                    }
                 }
             }
           }
+          else if (typeof message.PartyTypeValue !== 'undefined' && typeof message.Type !== 'undefined' && message.Type === 'AgentTyping') {
+            if (message.IsTextEntered === 'True' || message.IsTyping === 'True') {
+              chatbot.actions.displayChatbotActivity();
+            }
+            else {
+              chatbot.actions.hideChatbotActivity();
+            }
+          }
+          
         });
       };
     };
@@ -329,6 +343,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         auth.isManagerConnected = false;
         incontactSessionOn = false;
         auth.closedOnTimeout = true;
+        agentActive = false;
         clearTimeout(auth.timers.noAgents);
         clearTimeout(auth.timers.getChatText);
         removeIncontactCookies(['inbentaIncontactActive', 'incontactAccessToken', 'incontactResourceBaseUrl', 'incontactChatSessionId']);
@@ -466,6 +481,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
       auth.activeChat = false;
       chatbot.actions.setChatbotIcon({ source: 'default' });
       chatbot.actions.setChatbotName({ source: 'default' });
+      agentActive = false;
       if (workingTime){
         chatbot.actions.displaySystemMessage({
           message: 'agent-left',
@@ -474,6 +490,189 @@ var inbentaIncontactAdapter = function (incontactConf) {
         });
         finishChat();
       }
+    }
+
+    /**
+     * Get the token to validate the availability of agents
+     * @param {Object} response 
+     */
+    function tokenForActiveAgents(response) {
+        if (response.resource_server_base_uri !== undefined && response.resource_server_base_uri !== '') {
+            auth.resourceBaseUrl = response.resource_server_base_uri;
+            const chatBotmessageData = {
+                type:'answer',
+                message:'<em>Looking for agents</em>',
+            }
+            chatbot.actions.displayChatbotMessage(chatBotmessageData);
+            
+            var options = {
+                type: 'POST',
+                url: auth.tokenUrl + '/access-key',
+                async: true,
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify({
+                    'accessKeyId': incontactConf.accessKeyId,
+                    'accessKeySecret': incontactConf.accessKeySecret
+                })
+            };
+            requestCall(options, function(response) {
+                if (response.access_token !== undefined && response.access_token !== '') {
+                    lookForOperationHours(response.access_token);
+                }
+                else { //Continue with the escalation if there is no access_token
+                    continueWithEscalation();
+                }
+            });
+        }
+        else { //Continue with the escalation if we can't check for the token and url
+            continueWithEscalation();
+        }
+    }
+
+    /**
+     * Validate the operation hours
+     * @param {String} access_token 
+     */
+    function lookForOperationHours(access_token) {
+        var options = {
+            type: 'GET',
+            url: auth.resourceBaseUrl + '/services/' + incontactConf.version + '/hours-of-operation',
+            async: true,
+            headers: { 
+                'Authorization': 'bearer ' + access_token,
+                'Content-Type': 'application/json'
+            },
+            data: {}
+        };
+        requestCall(options, function(response) {
+            var validHours = true;
+            if (response.resultSet !== undefined && response.resultSet.hoursOfOperationProfiles !== undefined && response.resultSet.hoursOfOperationProfiles[0] !== undefined) {
+                var currentD = new Date();
+                var weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                var closed = false;
+                var outOfTime = false;
+                var outOfTimeMessage = '';
+                var days = null;
+                for (var i = 0; i < response.resultSet.hoursOfOperationProfiles.length; i++) {
+                    days = response.resultSet.hoursOfOperationProfiles[i].days;
+                    Object.keys(days).forEach(key => {
+                        if (weekday[currentD.getDay()] === days[key].day) {
+                            if (days[key].isClosedAllDay === 'True') {
+                                closed = true;
+                                return false;
+                            }
+                            var start = days[key].openTime.split(':');
+                            var end = days[key].closeTime.split(':');
+                            var opStart = new Date();
+                            var opEnd = new Date();
+                            opStart.setHours(start[0], start[1], start[2]);
+                            opEnd.setHours(end[0], end[1], end[2]);
+                            
+                            var additionlTime = false;
+                            var additionlTimeText = '';
+                            if (days[key].additionalOpenTime !== '' && days[key].additionalCloseTime !== '') {
+                                var startAdditional = days[key].additionalOpenTime.split(':');
+                                var endAdditional = days[key].additionalCloseTime.split(':');
+                                var opStartAdditional = new Date();
+                                var opEndAdditional = new Date();
+                                opStartAdditional.setHours(startAdditional[0], startAdditional[1], startAdditional[2]);
+                                opEndAdditional.setHours(endAdditional[0], endAdditional[1], endAdditional[2]);
+                                if (currentD >= opStartAdditional && currentD < opEndAdditional) {
+                                    additionlTime = true;
+                                }
+                                additionlTimeText = ' and from ' + days[key].additionalOpenTime.substring(0,5) + ' to ' + days[key].additionalCloseTime.substring(0,5);
+                            }
+                            if ((currentD >= opStart && currentD < opEnd) || additionlTime) {
+                                validHours = true;
+                                closed = false;
+                                outOfTime = false;
+                                i = response.resultSet.hoursOfOperationProfiles.length;
+                                return false;
+                            }
+                            outOfTimeMessage = 'Our Agents are available between '+days[key].openTime.substring(0,5)+' and '+days[key].closeTime.substring(0,5) + additionlTimeText;
+                            outOfTime = true;
+                            return false;
+                        }
+                    });
+                }
+                if (closed) {
+                    validHours = false;
+                    sendMessageToUser('The operation for today is CLOSED');
+                    return false;
+                }
+                if (outOfTime) {
+                    validHours = false;
+                    sendMessageToUser(outOfTimeMessage);
+                    return false;
+                }
+            }
+            if (validHours) {
+                lookForActiveAgents(access_token);
+            }
+        });
+    }
+
+    /**
+     * Search if there are agents available
+     * @param {String} access_token 
+     */
+    function lookForActiveAgents(access_token) {
+        var queryString = 'fields=agentStateId,isActive,agentStateName,firstName&top=200'
+        var options = {
+            type: 'GET',
+            url: auth.resourceBaseUrl + '/services/' + incontactConf.version + '/agents/states?'+queryString,
+            async: true,
+            headers: { 
+                'Authorization': 'bearer ' + access_token,
+                'Content-Type': 'application/json'
+            },
+            data: {}
+        };
+        requestCall(options, function(response) {
+            agentActive = false;
+            if (response.agentStates !== undefined) {
+                Object.keys(response.agentStates).forEach(key => {
+                    if (response.agentStates[key].agentStateId === 1 && response.agentStates[key].agentStateName === 'Available') {
+                        agentActive = true;
+                        return false;
+                    }
+                });
+                if (agentActive) {
+                    continueWithEscalation();
+                }
+                else {
+                    sendMessageToUser('No agents available');
+                }
+            }
+            else { //Continue with escalation if we can't validate the availability 
+                continueWithEscalation();
+            }
+        });
+    }
+
+    /**
+     * Continue executig the escalation
+     */
+    function continueWithEscalation() {
+      agentActive = true;
+      var messageData = {
+        directCall: 'escalationStart',
+      }
+      chatbot.actions.sendMessage(messageData);
+    }
+
+    /**
+     * Send a message to the user, after validate the agents availability
+     * @param {String} message 
+     */
+    function sendMessageToUser(message) {
+        chatbot.actions.hideChatbotActivity();
+        chatbot.actions.enableInput();
+        var chatBotmessageData = {
+            type:'answer',
+            message:'<em>'+message+'</em>',
+        }
+        chatbot.actions.displayChatbotMessage(chatBotmessageData);
     }
 
     /*
@@ -532,6 +731,12 @@ var inbentaIncontactAdapter = function (incontactConf) {
       if (incontactSessionOn) {
         sendMessageToIncontact(messageData.message, incontactConf.payload.fromName, true);
       } else {
+        if (messageData.directCall !== undefined && messageData.directCall === 'escalationStart' && !agentActive) {
+          chatbot.actions.disableInput();
+          chatbot.actions.displayChatbotActivity();
+          updateToken(tokenForActiveAgents); //Execute in order to get the "resourceBaseUrl"
+          return false;
+        }
         return next(messageData);
       }
     });
@@ -560,6 +765,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
     // Finish looking for agents Timeout
     chatbot.subscriptions.onResetSession(function (next) {
       dd("---onResetSession---");
+      agentActive = false;
       clearTimeout(auth.timers.noAgents);
       clearTimeout(auth.timers.getChatText);
       return next();
