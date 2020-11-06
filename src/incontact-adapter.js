@@ -744,7 +744,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
     var agentIconSet = false;
     // Show custom agent's picture
     chatbot.subscriptions.onDisplayChatbotMessage(function (messageData, next) {
-      if (incontactSessionOn && incontactConf.agent && !agentIconSet) {
+      if ((incontactSessionOn && incontactConf.agent && !agentIconSet) || auth.isManagerConnected) {
         if (incontactConf.agent.avatarImage !== '') chatbot.actions.setChatbotIcon({ source: 'url', url: incontactConf.agent.avatarImage });
         if (incontactConf.agent.name !== '') chatbot.actions.setChatbotName({ source: 'name', name: incontactConf.agent.name });
         agentIconSet = true;
