@@ -749,6 +749,10 @@ var inbentaIncontactAdapter = function (incontactConf) {
         if (incontactConf.agent.name !== '') chatbot.actions.setChatbotName({ source: 'name', name: incontactConf.agent.name });
         agentIconSet = true;
       }
+      else {
+        //Set the name empty when the chatbot is responding
+        chatbot.actions.setChatbotName({ source: 'name', name: ' ' });
+      }
       return next(messageData);
     });
 
