@@ -1,100 +1,218 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
-    <meta name="description" content="Inbenta InContact adapter demo">
-    <title>Inbenta Incontact Adapter demo</title>
-    <link rel="icon" href="https://www.inbenta.com/favicon.ico" type="image/x-icon">
-    <!-- Import Inbenta Chatbot SDK (works with SDK version 1.26.0, but you can try the last one listed at https://developers.inbenta.io/chatbot/javascript-sdk/sdk-subresource-integrity) -->
-    <script type="text/javascript" src="https://sdk.inbenta.io/chatbot/1.41.0/inbenta-chatbot-sdk.js" integrity="sha384-snw10HV9JuoyaFYMFkt9w2+g4X8t1+ifOc9vLuvoGpCvq7ZRwuy48qu30P9jHXaW" crossorigin="anonymous"></script>
-    <!-- Import InContact adapter -->
-    <script type="text/javascript" src="../src/incontact-adapter.js"></script>
-    <!-- Html page styles -->
-    <style>.inb-demo{margin:0}.inb-demo *{box-sizing:border-box}.inb-demo :focus{outline:0 transparent}.inb-demo__ul{list-style:none;margin:0;padding:0}.inb-demo__button,.inb-demo__title{margin:0}.inb-demo__main{padding:16px}.inb-demo__main__content{max-width:1000px;margin:0 auto;font-family:helvetica,sans-serif}.inb-demo__header{font-weight:700;font-size:16px;text-align:right;color:#04221d;background-color:#e6e6e6;border-bottom:1px solid #d8d8d8;padding:17px}.inb-demo__header__title{display:flex;align-items:center;justify-content:space-between;max-width:1000px;margin:0 auto}.inb-demo__header__title a{height:22px}.inb-demo__header__image{width:72px}.inb-demo__title{margin-top:40px;margin-bottom:24px;font-size:24px}.inb-demo__button{display:flex;align-items:center;justify-content:flex-start;min-height:30px;position:relative;padding-left:24px;text-decoration:none;color:#333;margin-bottom:6px;transition:.2s ease-out}.inb-demo__button:hover{color:#f6253a}.inb-demo__button:after,.inb-demo__button:before{position:absolute;left:8px;top:15px;content:"";display:inline-block;background-color:#333;border-radius:4px;width:6px;height:2px;transition:.2s ease-out}.inb-demo__button:before{transform:rotate(45deg);top:11px}.inb-demo__button:after{transform:rotate(-45deg)}.inb-demo__button:hover:after,.inb-demo__button:hover:before{background-color:#f6253a;left:12px}</style>
-  </head>
-  <body class="inb-demo">
-    <header class="inb-demo__header">
-    <div class="inb-demo__header__title">
-      <a href="https://www.inbenta.com" target="_blank"><img class="inb-demo__header__image" src="https://www.inbenta.com/wp-content/themes/inbenta/img/logo-inbenta.svg" alt="Inbenta"></a>
-    </div>
-    </header>
-    <main class="inb-demo__main">
-      <div class="inb-demo__main__content">
-        <h1 class="inb-demo__title">Chatbot Incontact Adapter demo</h1>
-      </div>
-    </main>
-    <!-- INBENTA CHATBOT SDK-->
-    <script type="text/javascript">
 
-    /*** Inbenta chatbot SDK configuration and build ***/
-    var inbApp = {
-      // Inbenta chatbot SDK credentials
-      sdkAuth: {
-        inbentaKey: '',
-        domainKey: ''
-      },
-      // Inbenta chatbot SDK configuration
-    	sdkConfig: {
-      	chatbotId: 'incontact_chatbot',
-      	environment: 'development',
-      	userType: 0,
-      	lang:'en',
-        labels: {
-          en: { 'interface-title': 'InContact Adapter' }
-        },
-      	closeButton: { visible: true },
-        html: { 'custom-window-header': '<div></div>' },
-    		adapters: []
-    	},
-      // Incontact Adapter conf
-      incontactConf: {
-        debugMode: false,
-        enabled: true, // Enable inContact escalation
-        applicationName: '',
-        vendorName: '',
-        applicationSecret: '',
-        accessKeyId: '', //Get 'accessKeyId' and 'accessKeySecret' from an existing user (https://developer.niceincontact.com/Documentation/Createaccesskey)
-        accessKeySecret: '', 
-        version: 'v12.0',
-        agentWaitTimeout: 20, // seconds
-        outOfTimeDetection: "department is currently closed", //This string must exist in the non-business hours label configured in the application
-        getMessageTimeout: 60, // miliseconds
-        incontactSessionLifetime: 5, // minutes
-        agent: {
-          name: 'Agent', // Agent name
-          avatarImage: '' // Agent avatar image soure (file or base64), if empty inContact image will be use
-        },
-        defaultUserName: 'User', //name displayed for user in incontact in case there is no form on escalate
-        defaultChatbotName: 'Chatbot', //name displayed for chatbot messages in incontact 
-        defaultSystemName: 'System', //name displayed for chatbot system messages in incontact 
-        payload: {
-          pointOfContact: '',
-          fromAddress: '',
-          chatRoomID: '',
-          parameters: []
-        }
-      }
-    }
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+	<meta name="description" content="Inbenta InContact adapter demo">
+	<title>Inbenta Incontact Adapter demo</title>
+	<link rel="icon" href="https://www.inbenta.com/favicon.ico" type="image/x-icon">
+	<!-- Import Inbenta Chatbot SDK (works with SDK version 1.26.0, but you can try the last one listed at https://developers.inbenta.io/chatbot/javascript-sdk/sdk-subresource-integrity) -->
+	<script type="text/javascript" src="https://sdk.inbenta.io/chatbot/1.41.0/inbenta-chatbot-sdk.js"
+		integrity="sha384-snw10HV9JuoyaFYMFkt9w2+g4X8t1+ifOc9vLuvoGpCvq7ZRwuy48qu30P9jHXaW"
+		crossorigin="anonymous"></script>
+	<!-- Import InContact adapter -->
+	<script type="text/javascript" src="../src/incontact-adapter.js?t=20201118"></script>
+	<!-- Html page styles -->
+	<style>
+		.inb-demo {
+			margin: 0
+		}
 
-    // Add adapters
-    window.inbApp.sdkConfig.adapters.push(
-      /*
-       * InContact adapter must be pushed before escalation adapters
-       * Uncomment below the escalation adatper to use
-       */
-      inbentaIncontactAdapter(inbApp.incontactConf),
+		.inb-demo * {
+			box-sizing: border-box
+		}
 
-      /*
-       * Escalate to InContact with natural language form
-       *  More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/nl-escalation-adapter-2
-       */
-      window.SDKNLEscalation2(inbentaPromiseAgentsAvailableTrue),
-    );
+		.inb-demo :focus {
+			outline: 0 transparent
+		}
 
-    window.InbentaChatbotSDK.buildWithDomainCredentials(inbApp.sdkAuth, inbApp.sdkConfig);
+		.inb-demo__ul {
+			list-style: none;
+			margin: 0;
+			padding: 0
+		}
 
-    </script>
-  </body>
+		.inb-demo__button,
+		.inb-demo__title {
+			margin: 0
+		}
+
+		.inb-demo__main {
+			padding: 16px
+		}
+
+		.inb-demo__main__content {
+			max-width: 1000px;
+			margin: 0 auto;
+			font-family: helvetica, sans-serif
+		}
+
+		.inb-demo__header {
+			font-weight: 700;
+			font-size: 16px;
+			text-align: right;
+			color: #04221d;
+			background-color: #e6e6e6;
+			border-bottom: 1px solid #d8d8d8;
+			padding: 17px
+		}
+
+		.inb-demo__header__title {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			max-width: 1000px;
+			margin: 0 auto
+		}
+
+		.inb-demo__header__title a {
+			height: 22px
+		}
+
+		.inb-demo__header__image {
+			width: 72px
+		}
+
+		.inb-demo__title {
+			margin-top: 40px;
+			margin-bottom: 24px;
+			font-size: 24px
+		}
+
+		.inb-demo__button {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			min-height: 30px;
+			position: relative;
+			padding-left: 24px;
+			text-decoration: none;
+			color: #333;
+			margin-bottom: 6px;
+			transition: .2s ease-out
+		}
+
+		.inb-demo__button:hover {
+			color: #f6253a
+		}
+
+		.inb-demo__button:after,
+		.inb-demo__button:before {
+			position: absolute;
+			left: 8px;
+			top: 15px;
+			content: "";
+			display: inline-block;
+			background-color: #333;
+			border-radius: 4px;
+			width: 6px;
+			height: 2px;
+			transition: .2s ease-out
+		}
+
+		.inb-demo__button:before {
+			transform: rotate(45deg);
+			top: 11px
+		}
+
+		.inb-demo__button:after {
+			transform: rotate(-45deg)
+		}
+
+		.inb-demo__button:hover:after,
+		.inb-demo__button:hover:before {
+			background-color: #f6253a;
+			left: 12px
+		}
+	</style>
+</head>
+
+<body class="inb-demo">
+	<header class="inb-demo__header">
+		<div class="inb-demo__header__title">
+			<a href="https://www.inbenta.com" target="_blank"><img class="inb-demo__header__image"
+					src="https://www.inbenta.com/wp-content/themes/inbenta/img/logo-inbenta.svg" alt="Inbenta"></a>
+		</div>
+	</header>
+	<main class="inb-demo__main">
+		<div class="inb-demo__main__content">
+			<h1 class="inb-demo__title">Chatbot Incontact Adapter demo</h1>
+		</div>
+	</main>
+	<!-- INBENTA CHATBOT SDK-->
+	<script type="text/javascript">
+
+		/*** Inbenta chatbot SDK configuration and build ***/
+		var inbApp = {
+			// Inbenta chatbot SDK credentials
+			sdkAuth: {
+				inbentaKey: '',
+				domainKey: ''
+			},
+			// Inbenta chatbot SDK configuration
+			sdkConfig: {
+				chatbotId: 'incontact_chatbot',
+				environment: 'development',
+				userType: 0,
+				lang: 'en',
+				labels: {
+					en: { 'interface-title': 'InContact Adapter' }
+				},
+				closeButton: { visible: true },
+				html: { 'custom-window-header': '<div></div>' },
+				adapters: []
+			},
+			// Incontact Adapter conf
+			incontactConf: {
+				debugMode: false,
+				enabled: true, // Enable inContact escalation
+				applicationName: '',
+				vendorName: '',
+				applicationSecret: '',
+				accessKeyId: '', //Get 'accessKeyId' and 'accessKeySecret' from an existing user (https://developer.niceincontact.com/Documentation/Createaccesskey)
+				accessKeySecret: '',
+				profileIdHoursOperation: 0,
+				version: 'v12.0',
+				agentWaitTimeout: 20, // seconds
+				outOfTimeDetection: "department is currently closed", //This string must exist in the non-business hours label configured in the application
+				getMessageTimeout: 60, // miliseconds
+				incontactSessionLifetime: 5, // minutes
+				agent: {
+					name: 'Agent', // Agent name
+					avatarImage: '' // Agent avatar image soure (file or base64), if empty inContact image will be use
+				},
+				defaultUserName: 'User', //name displayed for user in incontact in case there is no form on escalate
+				defaultChatbotName: 'Chatbot', //name displayed for chatbot messages in incontact 
+				defaultSystemName: 'System', //name displayed for chatbot system messages in incontact 
+				payload: {
+					pointOfContact: '',
+					fromAddress: '',
+					chatRoomID: '',
+					parameters: []
+				}
+			}
+		}
+
+		// Add adapters
+		window.inbApp.sdkConfig.adapters.push(
+			/*
+			 * InContact adapter must be pushed before escalation adapters
+			 * Uncomment below the escalation adatper to use
+			 */
+			inbentaIncontactAdapter(inbApp.incontactConf),
+
+			/*
+			 * Escalate to InContact with natural language form
+			 *  More info: https://developers.inbenta.io/chatbot/javascript-sdk/sdk-adapters/nl-escalation-adapter-2
+			 */
+			window.SDKNLEscalation2(inbentaPromiseAgentsAvailableTrue),
+		);
+
+		window.InbentaChatbotSDK.buildWithDomainCredentials(inbApp.sdkAuth, inbApp.sdkConfig);
+
+	</script>
+</body>
+
 </html>
