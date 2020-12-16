@@ -632,7 +632,9 @@ var inbentaIncontactAdapter = function (incontactConf) {
                 agentActive = false;
                 if (response.agentStates !== undefined) {
                     Object.keys(response.agentStates).forEach(key => {
-                        if (incontactConf.teamId == response.agentStates[key].teamId && response.agentStates[key].agentStateId === 1 && response.agentStates[key].agentStateName === 'Available') {
+                        if ((incontactConf.teamId == response.agentStates[key].teamId || incontactConf.teamId == 0)
+                            && response.agentStates[key].agentStateId === 1 && response.agentStates[key].agentStateName === 'Available'
+                        ) {
                             agentActive = true;
                             return false;
                         }
