@@ -28,6 +28,8 @@ This API allows to obtain chat updates (messages only) using Long Polling techno
 * The agent's name and avatar shown in the chatbot can also be configured within the property called '**agent**'. 
 * A verbose log can be activated setting the variable '**debugMode**' to 'true'.
 
+Additionally, you can have a couple extra features, like **Agents availability** and **Hours of Operation** by using **Real Time API** and **Admin API** respectively. For both of these functions, you'll need an **accessKeyId** and **accessKeySecret**, that can be getted from an Incontact active user. For more information go to: https://developer.niceincontact.com/Documentation/Createaccesskey.
+
 ## Installation
 In order to add this adapter to your SDK, you need to import the file `/src/incontact-adapter.js` into the HTML/JS file where you're building the SDK. Then, append it to the SDK adapters array providing the adapter configuration as shown in the [example](#integration-example) section.
 Before installing it, consider the following:
@@ -35,7 +37,10 @@ Before installing it, consider the following:
 * The adapter works with version **'1.41.0'** of the SDK.
 * The adapter only works with the Patron API version **'v12.0'**
 * The adapter needs **cookies** to maintain the user's session with Incontact.
-* There are variables that must be obtained from the Incontact platform, such as **'applicationName', 'vendorName' or 'applicationSecret'**. All of them can be found in the _Admin -> Account Settings -> API Applications_ section within the Incontact platform.
+* The response from escalation when there is no available agents is defined in backstage, with the content titled **'No Agents Available'**. So this content should be modified in order to show the expected message.
+* There are variables that must be obtained from the Incontact platform, such as **'applicationName', 'vendorName' or 'applicationSecret'**. All of them can be found in the _ACD -> ACD Configuration -> API Applications_ section within the Incontact platform.
+* For the use of **'Hours of Operation'** (additonally to the  **'accessKeyId'** and **'accessKeySecret'**), a **'profileIdHoursOperation'** is needed, and it can be obtained from the Incontact platform in: _ACD -> Contact Settings -> Hours of Operation_ section, as long as there is defined hours.
+* For the use of **'Agents availability'** (additonally to the  **'accessKeyId'** and **'accessKeySecret'**), a **'teamId'** is needed, and it can be obtained from the Incontact platform in: _Admin -> Teams_ section.
 * The **timers** defined in the configuration shouldn't be changed.
 
 ### Configuration
@@ -49,6 +54,10 @@ var incontactConf = {
   applicationName: '',
   vendorName: '',
   applicationSecret: '',
+  accessKeyId: '',
+  accessKeySecret: '',
+  profileIdHoursOperation: 0,
+  teamId: 0,
   version: 'v12.0',
   agentWaitTimeout: 20, // seconds
   getMessageTimeout: 20, // miliseconds
@@ -114,6 +123,10 @@ In the following example we're creating a chatbot with the InContact adapter:
         applicationName: '',
         vendorName: '',
         applicationSecret: '',
+        accessKeyId: '',
+        accessKeySecret: '',
+        profileIdHoursOperation: 0,
+        teamId: 0,
         version: 'v12.0',
         agentWaitTimeout: 20, // seconds
         getMessageTimeout: 20,
@@ -196,6 +209,10 @@ Here is the full integration code:
         applicationName: '',
         vendorName: '',
         applicationSecret: '',
+        accessKeyId: '',
+        accessKeySecret: '',
+        profileIdHoursOperation: 0,
+        teamId: 0,
         version: 'v12.0',
         agentWaitTimeout: 20, // seconds
         getMessageTimeout: 60, // seconds

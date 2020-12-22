@@ -126,10 +126,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
             auth.timers.noAgents = setTimeout(function () {
                 if (!auth.isManagerConnected) {
                     endChatSession();
-                    chatbot.actions.displaySystemMessage({
-                        message: 'no-agents', // Message can be customized in SDKconf -> labels
-                        translate: true
-                    });
+                    sendMessageToUser('no-agents');
                 }
             }, incontactConf.agentWaitTimeout * 1000);
         };
@@ -643,7 +640,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
                         continueWithEscalation();
                     }
                     else {
-                        sendMessageToUser('No agents available');
+                        sendMessageToUser('no-agents');
                     }
                 }
                 else { //Continue with escalation if we can't validate the availability 
@@ -668,13 +665,22 @@ var inbentaIncontactAdapter = function (incontactConf) {
          * @param {String} message 
          */
         function sendMessageToUser(message) {
-            chatbot.actions.hideChatbotActivity();
-            chatbot.actions.enableInput();
-            var chatBotmessageData = {
-                type: 'answer',
-                message: '<em>' + message + '</em>',
+            if (message === 'no-agents') {
+                var messageData = {
+                    directCall: 'escalationNoAgentsAvailable'
+                }
+                chatbot.actions.sendMessage(messageData);
+                chatbot.api.track('CHAT_UNATTENDED', { value: 'TRUE' });
             }
-            chatbot.actions.displayChatbotMessage(chatBotmessageData);
+            else {
+                chatbot.actions.hideChatbotActivity();
+                chatbot.actions.enableInput();
+                var chatBotmessageData = {
+                    type: 'answer',
+                    message: '<em>' + message + '</em>',
+                }
+                chatbot.actions.displayChatbotMessage(chatBotmessageData);
+            }
         }
 
         /*
