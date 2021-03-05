@@ -5,13 +5,13 @@
  * @param {Object} incontactConf [InContact APP configuration]
  *
  */
-var inbentaIncontactAdapter = function (incontactConf) {
+var inbentaIncontactAdapter = function(incontactConf) {
 
     let workingTime = true;
     let agentActive = false;
 
     if (!incontactConf.enabled) {
-        return function () { };
+        return function() {};
     } else if (!incontactConf.applicationName || !incontactConf.applicationSecret || !incontactConf.vendorName || !incontactConf.payload.pointOfContact) {
         console.warn('InContact adapter is misconfigured, therefore it has been disabled.');
         console.warn('Make sure applicationName, applicationSecret, pointOfContact and  vendorName are congifured.');
@@ -31,22 +31,22 @@ var inbentaIncontactAdapter = function (incontactConf) {
      * InContact session cookies management function
      */
     var IncontactSession = {
-        get: function (key) {
+        get: function(key) {
             var cookieObj = {};
-            document.cookie.split(';').forEach(function (cookiePair) {
+            document.cookie.split(';').forEach(function(cookiePair) {
                 let index = cookiePair.indexOf('=');
                 cookieObj[cookiePair.slice(0, index).trim()] = cookiePair.slice(index + 1, cookiePair.length).trim();
             });
             dd('cookies.get: ' + key + ':' + cookieObj[key], 'background: #222; color: #BADA55');
             return cookieObj[key];
         },
-        set: function (key, value) {
+        set: function(key, value) {
             const currentTime = new Date().getTime();
             dd('cookies.set: ' + key + ':' + value, 'background: #222; color: #BADA55');
             const expires = new Date(currentTime + incontactConf.incontactSessionLifetime * 60000);
             document.cookie = key + '=' + value + '; expires=' + expires + '; path=/';
         },
-        delete: function (key) {
+        delete: function(key) {
             var expired = new Date().getTime() - 3600; // Set it to 1h before to auto-expire it
             dd('cookies.delete: ' + key, 'background: #222; color: #BADA55');
             document.cookie = key + '=; expires=' + expired + '; path=/';
@@ -73,13 +73,13 @@ var inbentaIncontactAdapter = function (incontactConf) {
         if (typeof cookies === 'string') {
             IncontactSession.delete(cookies);
         } else if (Array.isArray(cookies)) {
-            cookies.forEach(function (cookie) {
+            cookies.forEach(function(cookie) {
                 IncontactSession.delete(cookie);
             });
         }
     }
 
-    return function (chatbot) {
+    return function(chatbot) {
         window.chatbotHelper = chatbot;
         // Initialize inContact auth object
         var auth = {
@@ -100,11 +100,11 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Conect to InContact function (triggered onStartEscalation)
          */
-        var connectToIncontact = function () {
+        var connectToIncontact = function() {
             incontactSessionOn = true;
             // Initiate inContact auth
             updateToken(
-                function (resp) {
+                function(resp) {
                     auth.accessToken = resp.access_token;
                     auth.resourceBaseUrl = resp.resource_server_base_uri;
                     IncontactSession.set('incontactAccessToken', auth.accessToken);
@@ -112,7 +112,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
                     // Get inContact chat profile info
                     getChatProfile();
                     // Create inContact chat room
-                    makeChat(function (resp) {
+                    makeChat(function(resp) {
                         workingTime = true;
                         auth.chatSessionId = resp.chatSessionId;
                         IncontactSession.set('inbentaIncontactActive', 'active');
@@ -123,7 +123,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
             );
             auth.closedOnTimeout = false;
             // Start "no agents" timeout
-            auth.timers.noAgents = setTimeout(function () {
+            auth.timers.noAgents = setTimeout(function() {
                 if (!auth.isManagerConnected) {
                     endChatSession();
                     sendMessageToUser('no-agents');
@@ -134,7 +134,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Update (or create) inContact token [request]
          */
-        var updateToken = function (callback) {
+        var updateToken = function(callback) {
             var options = {
                 type: 'POST',
                 url: auth.tokenUrl,
@@ -152,7 +152,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Get inContact chat profile info [request]
          */
-        var getChatProfile = function () {
+        var getChatProfile = function() {
             var options = {
                 type: 'GET',
                 url: auth.resourceBaseUrl + 'services/' + incontactConf.version + '/points-of-contact/' + incontactConf.payload.pointOfContact + '/chat-profile',
@@ -160,7 +160,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
             };
 
             var request = requestCall(options);
-            request.onload = request.onerror = function () {
+            request.onload = request.onerror = function() {
                 if (!this.response) {
                     return;
                 }
@@ -182,7 +182,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Create inContact chat room [request]
          */
-        var makeChat = function (callback) {
+        var makeChat = function(callback) {
             var options = {
                 type: 'POST',
                 url: auth.resourceBaseUrl + 'services/' + incontactConf.version + '/contacts/chats',
@@ -195,7 +195,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Get inContact agent responses [request]
          */
-        var getChatText = function () {
+        var getChatText = function() {
 
             dd("workingTime: " + workingTime);
             if (!workingTime) return;
@@ -208,14 +208,14 @@ var inbentaIncontactAdapter = function (incontactConf) {
             };
 
             var request = requestCall(options);
-            request.onload = request.onerror = function () {
+            request.onload = request.onerror = function() {
                 if (!this.response) {
                     return;
                 }
                 var resp = (this.response) ? JSON.parse(this.response) : {};
                 if (resp.chatSession) auth.chatSessionId = resp.chatSession;
                 if (workingTime && auth.activeChat) IncontactSession.set('incontactChatSessionId', auth.chatSessionId);
-                resp.messages.forEach(function (message) {
+                resp.messages.forEach(function(message) {
                     if (typeof message.Type !== 'undefined' && typeof message.Status !== 'undefined' && message.Status === 'Waiting') {
                         // in waiting we send chat, to connect with incontact
                         retrieveLastMessages();
@@ -252,12 +252,10 @@ var inbentaIncontactAdapter = function (incontactConf) {
                                     }
                                 }
                         }
-                    }
-                    else if (typeof message.PartyTypeValue !== 'undefined' && typeof message.Type !== 'undefined' && message.Type === 'AgentTyping') {
+                    } else if (typeof message.PartyTypeValue !== 'undefined' && typeof message.Type !== 'undefined' && message.Type === 'AgentTyping') {
                         if (message.IsTextEntered === 'True' || message.IsTyping === 'True') {
                             chatbot.actions.displayChatbotActivity();
-                        }
-                        else {
+                        } else {
                             chatbot.actions.hideChatbotActivity();
                         }
                     }
@@ -269,7 +267,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Send a single message to Incontact [request]
          */
-        var sendMessageToIncontact = function (message, author, async, callback, callbackData) {
+        var sendMessageToIncontact = function(message, author, async, callback, callbackData) {
             if (auth.chatSessionId === '') return;
 
             async = typeof async === 'boolean' ? async : false;
@@ -290,7 +288,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Send multiple message to Incontact [request] (recursive, ordered)
          */
-        var sendMultipleMessagesToIncontact = function (messageArray) {
+        var sendMultipleMessagesToIncontact = function(messageArray) {
 
             dd("--- sendMultipleMessagesToIncontact ---");
             dd(messageArray);
@@ -319,7 +317,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Close InContact chat session [request]
          */
-        var endChatSession = function () {
+        var endChatSession = function() {
             dd("---endChatSession---");
             dd("auth.chatSessionId: " + auth.chatSessionId);
             dd("workingTime: " + workingTime);
@@ -335,23 +333,23 @@ var inbentaIncontactAdapter = function (incontactConf) {
             requestCall(options, finishChat);
         };
 
-        var finishChat = function () {
-            auth.chatSessionId = '';
-            auth.isManagerConnected = false;
-            incontactSessionOn = false;
-            auth.closedOnTimeout = true;
-            agentActive = false;
-            clearTimeout(auth.timers.noAgents);
-            clearTimeout(auth.timers.getChatText);
-            removeIncontactCookies(['inbentaIncontactActive', 'incontactAccessToken', 'incontactResourceBaseUrl', 'incontactChatSessionId']);
-            chatbot.actions.hideChatbotActivity();
-            enterQuestion();
-            chatbot.actions.enableInput();
-        }
-        /*
-         * InContact http [request] template
-         */
-        var requestCall = function (requestOptions, callback, callbackData) {
+        var finishChat = function() {
+                auth.chatSessionId = '';
+                auth.isManagerConnected = false;
+                incontactSessionOn = false;
+                auth.closedOnTimeout = true;
+                agentActive = false;
+                clearTimeout(auth.timers.noAgents);
+                clearTimeout(auth.timers.getChatText);
+                removeIncontactCookies(['inbentaIncontactActive', 'incontactAccessToken', 'incontactResourceBaseUrl', 'incontactChatSessionId']);
+                chatbot.actions.hideChatbotActivity();
+                enterQuestion();
+                chatbot.actions.enableInput();
+            }
+            /*
+             * InContact http [request] template
+             */
+        var requestCall = function(requestOptions, callback, callbackData) {
             var xmlhttp = new XMLHttpRequest();
             requestOptions.async = true;
             if (!requestOptions.headers) requestOptions.headers = {};
@@ -360,7 +358,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
             }
             requestOptions.headers['Content-Type'] = 'application/json; charset=utf-8';
 
-            xmlhttp.onreadystatechange = function () {
+            xmlhttp.onreadystatechange = function() {
                 if (xmlhttp.readyState === XMLHttpRequest.DONE) {
                     var response = (this.responseText && this.responseText.indexOf('<!DOCTYPE') == -1) ? JSON.parse(this.responseText) : { messages: [] };
                     dd("Request completed:" + " " + requestOptions.url, 'background: #222; color: #BA55BA');
@@ -396,11 +394,11 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * InContact http response handler
          */
-        var httpResponseHandler = function (url, messages) {
+        var httpResponseHandler = function(url, messages) {
             var httpCodeErrors = {
-                200: function () {
+                200: function() {
                     if (messages && messages.length > 0) {
-                        messages.forEach(function (message) {
+                        messages.forEach(function(message) {
                             var text = message.Text;
                             if (text && text.includes(incontactConf.outOfTimeDetection)) return outOfTime(text);
                         });
@@ -408,7 +406,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
                     if (!auth.closedOnTimeout) auth.timers.getChatText = setTimeout(getChatText, incontactConf.getMessageTimeout);
                 },
                 202: {},
-                304: function () {
+                304: function() {
                     if (!auth.closedOnTimeout) auth.timers.getChatText = setTimeout(getChatText, incontactConf.getMessageTimeout);
                 },
                 400: genericError,
@@ -512,16 +510,14 @@ var inbentaIncontactAdapter = function (incontactConf) {
                         'accessKeySecret': incontactConf.accessKeySecret
                     })
                 };
-                requestCall(options, function (response) {
+                requestCall(options, function(response) {
                     if (response.access_token !== undefined && response.access_token !== '') {
                         lookForOperationHours(response.access_token);
-                    }
-                    else { //Continue with the escalation if there is no access_token
+                    } else { //Continue with the escalation if there is no access_token
                         continueWithEscalation();
                     }
                 });
-            }
-            else { //Continue with the escalation if we can't check for the token and url
+            } else { //Continue with the escalation if we can't check for the token and url
                 continueWithEscalation();
             }
         }
@@ -541,7 +537,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
                 },
                 data: {}
             };
-            requestCall(options, function (response) {
+            requestCall(options, function(response) {
                 var validHours = true;
                 if (response.resultSet !== undefined && response.resultSet.hoursOfOperationProfiles !== undefined && response.resultSet.hoursOfOperationProfiles[0] !== undefined) {
                     var currentD = new Date();
@@ -586,7 +582,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
                                     i = response.resultSet.hoursOfOperationProfiles.length;
                                     return false;
                                 }
-                                outOfTimeMessage = 'Our Agents are available between ' + days[key].openTime.substring(0, 5) + ' and ' + days[key].closeTime.substring(0, 5) + additionlTimeText;
+                                outOfTimeMessage = 'There are no agents available at this moment';
                                 outOfTime = true;
                                 return false;
                             }
@@ -625,12 +621,12 @@ var inbentaIncontactAdapter = function (incontactConf) {
                 },
                 data: {}
             };
-            requestCall(options, function (response) {
+            requestCall(options, function(response) {
                 agentActive = false;
                 if (response.agentStates !== undefined) {
                     Object.keys(response.agentStates).forEach(key => {
-                        if ((incontactConf.teamId == response.agentStates[key].teamId || incontactConf.teamId == 0)
-                            && response.agentStates[key].agentStateId === 1 && response.agentStates[key].agentStateName === 'Available'
+                        if ((incontactConf.teamId == response.agentStates[key].teamId || incontactConf.teamId == 0) &&
+                            response.agentStates[key].agentStateId === 1 && response.agentStates[key].agentStateName === 'Available'
                         ) {
                             agentActive = true;
                             return false;
@@ -638,12 +634,10 @@ var inbentaIncontactAdapter = function (incontactConf) {
                     });
                     if (agentActive) {
                         continueWithEscalation();
-                    }
-                    else {
+                    } else {
                         sendMessageToUser('no-agents');
                     }
-                }
-                else { //Continue with escalation if we can't validate the availability 
+                } else { //Continue with escalation if we can't validate the availability 
                     continueWithEscalation();
                 }
             });
@@ -671,8 +665,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
                 }
                 chatbot.actions.sendMessage(messageData);
                 chatbot.api.track('CHAT_UNATTENDED', { value: 'TRUE' });
-            }
-            else {
+            } else {
                 chatbot.actions.hideChatbotActivity();
                 chatbot.actions.enableInput();
                 var chatBotmessageData = {
@@ -686,7 +679,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         /*
          * Get chatbot conversation mesages and prepare them to be sent to InContact agent
          */
-        var retrieveLastMessages = function () {
+        var retrieveLastMessages = function() {
             var transcript = chatbot.actions.getConversationTranscript();
             sendMultipleMessagesToIncontact(transcript);
             auth.timers.getChatText = setTimeout(getChatText, incontactConf.getMessageTimeout);
@@ -696,7 +689,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
          * If one of the fields is assigned to the label 'EMAIL_ADDRESS', the value provided by the user will replace the 'fromAdress' field.
          * The rest of the escalation data will be inserted in the 'parameters' array.
          */
-        var updateChatInfo = function (escalateData) {
+        var updateChatInfo = function(escalateData) {
 
             for (var field in escalateData) {
                 var fieldName = field.toLowerCase();
@@ -719,7 +712,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
          */
 
         // Initiate escalation to inContact
-        chatbot.subscriptions.onEscalateToAgent(function (escalateData, next) {
+        chatbot.subscriptions.onEscalateToAgent(function(escalateData, next) {
             dd("---onEscalationStart--- payload:");
             //Update chat payload before creating the chat
             updateChatInfo(escalateData);
@@ -732,7 +725,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         });
 
         // Route messages to inContact
-        chatbot.subscriptions.onSendMessage(function (messageData, next) {
+        chatbot.subscriptions.onSendMessage(function(messageData, next) {
             dd("---onSendMessage---:");
             dd(messageData);
             dd("---incontactSessionOn---: " + incontactSessionOn);
@@ -751,13 +744,12 @@ var inbentaIncontactAdapter = function (incontactConf) {
 
         var agentIconSet = false;
         // Show custom agent's picture
-        chatbot.subscriptions.onDisplayChatbotMessage(function (messageData, next) {
+        chatbot.subscriptions.onDisplayChatbotMessage(function(messageData, next) {
             if ((incontactSessionOn && incontactConf.agent && !agentIconSet) || auth.isManagerConnected) {
                 if (incontactConf.agent.avatarImage !== '') chatbot.actions.setChatbotIcon({ source: 'url', url: incontactConf.agent.avatarImage });
                 if (incontactConf.agent.name !== '') chatbot.actions.setChatbotName({ source: 'name', name: incontactConf.agent.name });
                 agentIconSet = true;
-            }
-            else {
+            } else {
                 //Set the name empty when the chatbot is responding
                 chatbot.actions.setChatbotName({ source: 'name', name: ' ' });
             }
@@ -765,7 +757,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         });
 
         // Handle generic error
-        chatbot.subscriptions.onSelectSystemMessageOption(function (optionData, next) {
+        chatbot.subscriptions.onSelectSystemMessageOption(function(optionData, next) {
             dd("---onSelectSystemMessageOption---");
             if (optionData.option.value === 'try-again') {
                 enterQuestion();
@@ -775,7 +767,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         });
 
         // Finish looking for agents Timeout
-        chatbot.subscriptions.onResetSession(function (next) {
+        chatbot.subscriptions.onResetSession(function(next) {
             dd("---onResetSession---");
             agentActive = false;
             clearTimeout(auth.timers.noAgents);
@@ -784,7 +776,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         });
 
         // Handle inContact session/no-session on refresh
-        chatbot.subscriptions.onReady(function (next) {
+        chatbot.subscriptions.onReady(function(next) {
             dd("---onReady---");
             var statusChat = IncontactSession.get('inbentaIncontactActive');
 
@@ -800,7 +792,7 @@ var inbentaIncontactAdapter = function (incontactConf) {
         });
 
         // Clear inContact chatSession on exitConversation
-        chatbot.subscriptions.onSelectSystemMessageOption(function (optionData, next) {
+        chatbot.subscriptions.onSelectSystemMessageOption(function(optionData, next) {
             if (optionData.id === 'exitConversation' && optionData.option.value === 'yes' && incontactSessionOn === true) {
                 clearTimeout(auth.timers.getChatText);
                 incontactSessionOn = false;
@@ -819,14 +811,14 @@ var inbentaIncontactAdapter = function (incontactConf) {
 
         // DATA KEYS LOG
         // Contact Attended log on agent join conversation system message
-        chatbot.subscriptions.onDisplaySystemMessage(function (messageData, next) {
+        chatbot.subscriptions.onDisplaySystemMessage(function(messageData, next) {
             if (messageData.message === 'agent-joined') {
                 chatbot.api.track('CHAT_ATTENDED', { value: 'TRUE' });
             }
             return next(messageData);
         });
         // Contact Unattended log on no agent available system message
-        chatbot.subscriptions.onDisplaySystemMessage(function (messageData, next) {
+        chatbot.subscriptions.onDisplaySystemMessage(function(messageData, next) {
             if (messageData.message === 'no-agents') {
                 chatbot.api.track('CHAT_UNATTENDED', { value: 'TRUE' });
             }
@@ -840,8 +832,8 @@ var inbentaIncontactAdapter = function (incontactConf) {
  * HELPER: Returns Promise resolving to dummy Object { agentsAvailable: true }
  *
  */
-var inbentaPromiseAgentsAvailableTrue = function () {
-    return new Promise(function (resolve, reject) {
+var inbentaPromiseAgentsAvailableTrue = function() {
+    return new Promise(function(resolve, reject) {
         resolve({ 'agentsAvailable': true });
     });
 }
