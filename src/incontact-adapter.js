@@ -14,7 +14,7 @@ var inbentaIncontactAdapter = function(incontactConf) {
         return function() {};
     } else if (!incontactConf.applicationName || !incontactConf.applicationSecret || !incontactConf.vendorName || !incontactConf.payload.pointOfContact) {
         console.warn('InContact adapter is misconfigured, therefore it has been disabled.');
-        console.warn('Make sure applicationName, applicationSecret, pointOfContact and  vendorName are congifured.');
+        console.warn('Make sure applicationName, applicationSecret, pointOfContact and vendorName are configured.');
     }
 
     // Initialize inContact session on/off variable
@@ -126,7 +126,7 @@ var inbentaIncontactAdapter = function(incontactConf) {
             auth.timers.noAgents = setTimeout(function() {
                 if (!auth.isManagerConnected) {
                     endChatSession();
-                    sendMessageToUser('no-agents');
+                    chatbot.actions.displaySystemMessage({ message: 'no-agents', translate: true });
                 }
             }, incontactConf.agentWaitTimeout * 1000);
         };
@@ -635,7 +635,9 @@ var inbentaIncontactAdapter = function(incontactConf) {
                     if (agentActive) {
                         continueWithEscalation();
                     } else {
-                        sendMessageToUser('no-agents');
+                        chatbot.actions.displaySystemMessage({ message: 'no-agents', translate: true });
+                        chatbot.actions.hideChatbotActivity();
+                        chatbot.actions.enableInput();
                     }
                 } else { //Continue with escalation if we can't validate the availability 
                     continueWithEscalation();
@@ -659,21 +661,13 @@ var inbentaIncontactAdapter = function(incontactConf) {
          * @param {String} message 
          */
         function sendMessageToUser(message) {
-            if (message === 'no-agents') {
-                var messageData = {
-                    directCall: 'escalationNoAgentsAvailable'
-                }
-                chatbot.actions.sendMessage(messageData);
-                chatbot.api.track('CHAT_UNATTENDED', { value: 'TRUE' });
-            } else {
-                chatbot.actions.hideChatbotActivity();
-                chatbot.actions.enableInput();
-                var chatBotmessageData = {
-                    type: 'answer',
-                    message: '<em>' + message + '</em>',
-                }
-                chatbot.actions.displayChatbotMessage(chatBotmessageData);
+            chatbot.actions.hideChatbotActivity();
+            chatbot.actions.enableInput();
+            var chatBotmessageData = {
+                type: 'answer',
+                message: '<em>' + message + '</em>',
             }
+            chatbot.actions.displayChatbotMessage(chatBotmessageData);
         }
 
         /*
@@ -732,17 +726,27 @@ var inbentaIncontactAdapter = function(incontactConf) {
             if (incontactSessionOn) {
                 sendMessageToIncontact(messageData.message, incontactConf.payload.fromName, true);
             } else {
-                if (messageData.directCall !== undefined && messageData.directCall === 'escalationStart' && !agentActive) {
+                if (!agentActive &&
+                    (
+                        (messageData.directCall !== undefined && messageData.directCall === 'escalationStart') ||
+                        (escalationOffer && messageData.userActivityOptions !== undefined && messageData.userActivityOptions === 'yes')
+                    )
+                ) {
+                    escalationOffer = false;
                     chatbot.actions.disableInput();
                     chatbot.actions.displayChatbotActivity();
                     updateToken(tokenForActiveAgents); //Execute in order to get the "resourceBaseUrl"
                     return false;
                 }
+                escalationOffer = false;
+
                 return next(messageData);
             }
         });
 
         var agentIconSet = false;
+        var escalationOffer = false;
+
         // Show custom agent's picture
         chatbot.subscriptions.onDisplayChatbotMessage(function(messageData, next) {
             if ((incontactSessionOn && incontactConf.agent && !agentIconSet) || auth.isManagerConnected) {
@@ -752,6 +756,14 @@ var inbentaIncontactAdapter = function(incontactConf) {
             } else {
                 //Set the name empty when the chatbot is responding
                 chatbot.actions.setChatbotName({ source: 'name', name: ' ' });
+            }
+            if (messageData.type === "polarQuestion"
+                && messageData.attributes !== null
+                && messageData.attributes.DIRECT_CALL !== undefined
+                && messageData.attributes.DIRECT_CALL === "escalationStart"
+            ) {
+                //When escalation is offered using polar question
+                escalationOffer = true;
             }
             return next(messageData);
         });
@@ -820,7 +832,7 @@ var inbentaIncontactAdapter = function(incontactConf) {
         // Contact Unattended log on no agent available system message
         chatbot.subscriptions.onDisplaySystemMessage(function(messageData, next) {
             if (messageData.message === 'no-agents') {
-                chatbot.api.track('CHAT_UNATTENDED', { value: 'TRUE' });
+                chatbot.api.track('CHAT_NO_AGENTS', { value: 'TRUE' });
             }
             return next(messageData);
         });
