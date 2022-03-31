@@ -9,6 +9,7 @@ var inbentaIncontactAdapter = function(incontactConf) {
 
     let workingTime = true;
     let agentActive = false;
+    let showNoAgentsAvailable = false;
 
     if (!incontactConf.enabled) {
         return function() {};
@@ -125,8 +126,11 @@ var inbentaIncontactAdapter = function(incontactConf) {
             // Start "no agents" timeout
             auth.timers.noAgents = setTimeout(function() {
                 if (!auth.isManagerConnected) {
+                    showNoAgentsAvailable = true;
+                    incontactSessionOn = false;
                     endChatSession();
                     chatbot.actions.displaySystemMessage({ message: 'no-agents', translate: true });
+                    chatbot.actions.sendMessage({ directCall: "escalationNoAgentsAvailable" });
                 }
             }, incontactConf.agentWaitTimeout * 1000);
         };
@@ -334,21 +338,25 @@ var inbentaIncontactAdapter = function(incontactConf) {
         };
 
         var finishChat = function() {
-                auth.chatSessionId = '';
-                auth.isManagerConnected = false;
-                incontactSessionOn = false;
-                auth.closedOnTimeout = true;
-                agentActive = false;
-                clearTimeout(auth.timers.noAgents);
-                clearTimeout(auth.timers.getChatText);
-                removeIncontactCookies(['inbentaIncontactActive', 'incontactAccessToken', 'incontactResourceBaseUrl', 'incontactChatSessionId']);
-                chatbot.actions.hideChatbotActivity();
+            auth.chatSessionId = '';
+            auth.isManagerConnected = false;
+            incontactSessionOn = false;
+            auth.closedOnTimeout = true;
+            agentActive = false;
+            clearTimeout(auth.timers.noAgents);
+            clearTimeout(auth.timers.getChatText);
+            removeIncontactCookies(['inbentaIncontactActive', 'incontactAccessToken', 'incontactResourceBaseUrl', 'incontactChatSessionId']);
+            chatbot.actions.hideChatbotActivity();
+            if (!showNoAgentsAvailable) {
                 enterQuestion();
-                chatbot.actions.enableInput();
             }
-            /*
-             * InContact http [request] template
-             */
+            showNoAgentsAvailable = false;
+            chatbot.actions.enableInput();
+        }
+
+        /*
+        * InContact http [request] template
+        */
         var requestCall = function(requestOptions, callback, callbackData) {
             var xmlhttp = new XMLHttpRequest();
             requestOptions.async = true;
@@ -590,12 +598,14 @@ var inbentaIncontactAdapter = function(incontactConf) {
                     }
                     if (closed) {
                         validHours = false;
-                        sendMessageToUser('The operation for today is CLOSED');
+                        chatbot.actions.displaySystemMessage({ message: 'The operation for today is CLOSED', translate: false });
+                        finishChat();
                         return false;
                     }
                     if (outOfTime) {
                         validHours = false;
-                        sendMessageToUser(outOfTimeMessage);
+                        chatbot.actions.displaySystemMessage({ message: outOfTimeMessage, translate: false });
+                        finishChat();
                         return false;
                     }
                 }
@@ -623,7 +633,7 @@ var inbentaIncontactAdapter = function(incontactConf) {
             };
             requestCall(options, function(response) {
                 agentActive = false;
-                if (response.agentStates !== undefined) {
+                if (response.agentStates !== undefined && response.agentStates !== null) {
                     Object.keys(response.agentStates).forEach(key => {
                         if ((incontactConf.teamId == response.agentStates[key].teamId || incontactConf.teamId == 0) &&
                             response.agentStates[key].agentStateId === 1 && response.agentStates[key].agentStateName === 'Available'
@@ -636,8 +646,9 @@ var inbentaIncontactAdapter = function(incontactConf) {
                         continueWithEscalation();
                     } else {
                         chatbot.actions.displaySystemMessage({ message: 'no-agents', translate: true });
-                        chatbot.actions.hideChatbotActivity();
-                        chatbot.actions.enableInput();
+                        showNoAgentsAvailable = true;
+                        finishChat();
+                        chatbot.actions.sendMessage({directCall: "escalationNoAgentsAvailable"});
                     }
                 } else { //Continue with escalation if we can't validate the availability 
                     continueWithEscalation();
@@ -654,20 +665,6 @@ var inbentaIncontactAdapter = function(incontactConf) {
                 directCall: 'escalationStart',
             }
             chatbot.actions.sendMessage(messageData);
-        }
-
-        /**
-         * Send a message to the user, after validate the agents availability
-         * @param {String} message 
-         */
-        function sendMessageToUser(message) {
-            chatbot.actions.hideChatbotActivity();
-            chatbot.actions.enableInput();
-            var chatBotmessageData = {
-                type: 'answer',
-                message: '<em>' + message + '</em>',
-            }
-            chatbot.actions.displayChatbotMessage(chatBotmessageData);
         }
 
         /*
